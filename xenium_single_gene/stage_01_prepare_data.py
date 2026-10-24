@@ -12,10 +12,7 @@ import numpy as np
 # Configuration
 # ============================================================
 
-INPUT_H5AD = (
-    "/Users/krishna/Desktop/LiverFibrosis/Jorge_Mouse_Data/"
-    "adata_liver_corrected_LOCALFIX.h5ad"
-)
+INPUT_H5AD = ("path/to/your/adata.h5ad")
 
 N_TOP_HVGS = 5500
 
