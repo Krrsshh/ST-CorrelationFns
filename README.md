@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-This repository contains computational pipelines for implementing spatial gene-expression correlation functions in spatial transcriptomics data. The approach characterizes how gene-expression correlations vary with the distance between cells, providing measures of spatial correlation length $(\xi)$ and integrated correlation $(\chi)$. The repository currently includes a single-gene analysis pipeline and a gene-pair analysis pipeline for hepatocytes in mouse liver Xenium data, comparing Control and CCl4-treated samples.
+This repository contains computational pipelines for implementing spatial gene-expression correlation functions in spatial transcriptomics data. The approach characterizes how gene-expression correlations vary with the distance between cells, providing measures of spatial correlation length $(\xi)$ and susceptibility $(\chi)$. The repository currently includes a single-gene analysis pipeline and a gene-pair analysis pipeline for hepatocytes in mouse liver Xenium data, comparing Control and CCl4-treated samples.
 
 ## 2. Repository Contents
 
@@ -32,7 +32,7 @@ The analysis is performed separately for each gene in each core.
 1. **Spatial pairs:** A KD-tree is used to identify unique, unordered pairs of hepatocytes separated by no more than 100 µm.
 2. **Correlation function:** For each distance bin, the gene-expression correlation is calculated from mean-centered expression products and normalized by gene-expression variance.
 3. **Correlation length $(\xi)$:** An exponential decay model, $(C(r)=A\exp(-r/\xi))$, is fitted to the correlation function using distance-bin centers at or beyond 30 µm. The fitted $(\xi)$ characterizes the spatial decay length of the correlation.
-4. **Integrated correlation $(\chi)$:** The correlation function is integrated over the same distance tail using radial weighting, $(2\pi r\Delta r\)$.
+4. **Susceptibility $(\chi)$:** The correlation function is integrated over the same distance tail using radial weighting, $(2\pi r\Delta r\)$.
 5. **Condition-level effects:** Core-level results are summarized separately for Control and CCl4, and effect metrics are calculated to compare the conditions.
 
 The distance-bin width is 5 µm. The analysis uses the `lognorm` expression layer by default.
@@ -61,7 +61,7 @@ A gene-core combination must satisfy the following checks before its result is s
 
 The exponential fit is accepted only if numerical fitting succeeds, $(\xi>0)$, $(\xi<500)$ µm, and $(R^2>0.1)$. The fit is unconstrained, the positive-tail requirement is disabled, and the estimated uncertainty in $(\xi)$ is not used as an acceptance criterion.
 
-**Retention of $(\chi)$:** The integrated correlation is calculated over the same distance tail. If fitting fails or the fitted \(\xi\) is rejected, the core-gene result can still be stored with $(\xi)$ recorded as missing (`NaN`). However, combinations excluded by the earlier variance, correlation-curve, tail-point, or curve-variability checks do not contribute to either $(\xi)$ or $(\chi)$ summaries.
+**Retention of $(\chi)$:** The integrated correlation is calculated over the same distance tail. If fitting fails or the fitted $(\xi)$ is rejected, the core-gene result can still be stored with $(\xi)$ recorded as missing (`NaN`). However, combinations excluded by the earlier variance, correlation-curve, tail-point, or curve-variability checks do not contribute to either $(\xi)$ or $(\chi)$ summaries.
 
 ### Stage 3 — Condition-Level Effect Table
 
@@ -74,7 +74,7 @@ Condition-level summaries use the following criteria:
 - **Minimum replication:** At least three valid core-level $(\xi)$ estimates are required in each condition.
 - **Finite effect metrics:** Genes are retained only when all four effect metrics are finite: $(Z_\xi)$, $(Z_\chi)$, $(\log(\xi_{\mathrm{Control}}/\xi_{\mathrm{CCl4}}))$, and $(\Delta\chi)$.
 
-No additional $(R^2)$ threshold is applied in Stage 3. Mean \(R^2\) values are reported as descriptive quality-control summaries of accepted fits.
+No additional $(R^2)$ threshold is applied in Stage 3. Mean $(R^2)$ values are reported as descriptive quality-control summaries of accepted fits.
 
 **Implementation note:** Although $(\chi)$ does not depend on whether the $(\xi)$ fit is accepted, its inclusion still depends on the gene-core combination passing the preceding Stage 2 checks and reaching the result-storage step.
 
@@ -146,7 +146,7 @@ The final effect table is written to:
 outputs/Corrected_Xenium_SingleGene_EffectTable_y0relaxed.csv
 ```
 
-The table contains condition-level summaries of $(\xi)$ and (\chi)$, sample counts, mean fit-quality values, and the following effect metrics:
+The table contains condition-level summaries of $(\xi)$ and $(\chi)$, sample counts, mean fit-quality values, and the following effect metrics:
 
 - `Z_xi` — Standardized difference in mean correlation length.
 - `Z_chi` — Standardized difference in mean integrated correlation.
