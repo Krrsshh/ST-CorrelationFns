@@ -7,13 +7,17 @@ Runs:
     Stage 2: Compute spatial correlations and fit correlation lengths
     Stage 3: Summarize condition-level effects
 """
-
+from pathlib import Path
 from genepair.stage_01_prepare_data import prepare_data
 from genepair.stage_02_compute_spatial_correlations import (
     compute_spatial_correlations,
 )
 from genepair.stage_03_summarize_effects import summarize_effects
 
+OUTPUT_DIR = Path("outputs")
+OUTPUT_EFFECT_TABLE = (
+    OUTPUT_DIR / "Corrected_Xenium_GenePair_EffectTable.csv"
+)
 
 def main():
     # Stage 1: Prepare data
@@ -26,6 +30,11 @@ def main():
 
     # Stage 3: Summarize condition-level effects
     effect_pair_df = summarize_effects(xi_batch_pair_df)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    effect_pair_df.to_csv(OUTPUT_EFFECT_TABLE, index=False)
+
+    print(f"Effect table saved to: {OUTPUT_EFFECT_TABLE.resolve()}")
 
     print("\nGene-pair pipeline completed successfully.")
     print(f"Genes analyzed: {len(genes_use)}")
