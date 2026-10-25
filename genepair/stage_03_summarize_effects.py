@@ -13,13 +13,7 @@ import pandas as pd
 # ============================================================
 # Parameters
 # ============================================================
-
 min_valid_cores_per_condition = 3
-
-OUTPUT_EFFECT_TABLE = (
-    "Corrected_Xenium_GenePair_EffectTable.csv"
-)
-
 
 # ============================================================
 # Main Stage 3 function
@@ -480,18 +474,5 @@ def summarize_effects(xi_batch_pair_df):
         ]
     ].copy()
 
-    # ========================================================
-    # Export complete effect table
-    # ========================================================
-
-    effect_pair_df.to_csv(
-        OUTPUT_EFFECT_TABLE,
-        index=False
-    )
-
-    print(
-        f"\nEffect table exported to:\n"
-        f"{OUTPUT_EFFECT_TABLE}"
-    )
 
     return effect_pair_df
