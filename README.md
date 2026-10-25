@@ -175,13 +175,14 @@ The single-gene pipeline selects highly variable genes (HVGs), whereas the gene-
 
 ### Step 4 — Inspect the output
 
-The final effect table is written to:
+The final effect tables are written to:
 
 ```text
 outputs/Corrected_Xenium_SingleGene_EffectTable_y0relaxed.csv
+outputs/Corrected_Xenium_GenePair_EffectTable.csv
 ```
 
-The table contains condition-level summaries of $(\xi)$ and $(\chi)$, sample counts, mean fit-quality values, and the following effect metrics:
+The tables contains condition-level summaries of $(\xi)$ and $(\chi)$, sample counts, mean fit-quality values, and the following effect metrics:
 
 - `Z_xi` — Standardized difference in mean correlation length.
 - `Z_chi` — Standardized difference in mean integrated correlation.
@@ -191,8 +192,7 @@ The table contains condition-level summaries of $(\xi)$ and $(\chi)$, sample cou
 Intermediate core-level results and quality-control information are returned by the analysis stages. The driver currently exports the final condition-level effect table.
 
 ## 7. Reproducibility and Citation
-
-The pipeline uses Scanpy for highly variable gene selection and records the relevant software dependencies in `requirements.txt`. The HVG selection random state is set to 42. Spatial analysis settings, core assignments, and filtering thresholds are defined in the corresponding stage scripts.
+The single-gene pipeline uses Scanpy for highly variable gene (HVG) selection and sets the HVG selection random state to 42. Relevant software dependencies are recorded in `requirements.txt`. Spatial analysis settings, core assignments, and filtering thresholds are defined in the corresponding stage scripts.
 
 For reproducibility, use a compatible input AnnData object and retain the documented metadata, expression layers, spatial coordinates, and core assignments. Results may depend on the input dataset and preprocessing.
 
