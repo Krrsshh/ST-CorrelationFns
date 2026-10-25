@@ -6,7 +6,9 @@ This repository contains computational pipelines for implementing spatial gene-e
 
 ## 2. Repository Contents
 
-The single-gene analysis is implemented in `xenium_single_gene/`.
+The repository contains two analysis pipelines: a single-gene pipeline implemented in `xenium_single_gene/` and a gene-pair pipeline implemented in `genepair/`.
+
+### Single-Gene Pipeline
 
 ```text
 xenium_single_gene/
@@ -23,6 +25,23 @@ xenium_single_gene/
 - **`stage_03_summarize_effects.py`** — Summarizes core-level results by condition and calculates Control-versus-CCl4 effect metrics.
 - **`__init__.py`** — Initializes the Python package.
 
+### Gene-Pair Pipeline
+
+```text
+genepair/
+├── __init__.py
+├── run_genepair.py
+├── stage_01_prepare_data.py
+├── stage_02_compute_spatial_correlations.py
+└── stage_03_summarize_effects.py
+```
+
+- **`run_genepair.py`** — Runs the three analysis stages and returns the final gene-pair effect table and intermediate results.
+- **`stage_01_prepare_data.py`** — Loads the AnnData dataset, selects hepatocytes, and prepares the configured cores and genes for gene-pair analysis. By default, all genes are used.
+- **`stage_02_compute_spatial_correlations.py`** — Computes core-level gene-pair expression correlation functions, estimates $(\xi)$, and calculates $(\chi)$.
+- **`stage_03_summarize_effects.py`** — Summarizes gene-pair results by condition and calculates Control-versus-CCl4 effect metrics.
+- **`__init__.py`** — Initializes the Python package.
+
 The `outputs/` directory is used to store generated result files.
 
 ## 3. Method Overview
@@ -30,7 +49,9 @@ The `outputs/` directory is used to store generated result files.
 The analysis is performed separately for each gene in each core.
 
 1. **Spatial pairs:** A KD-tree is used to identify unique, unordered pairs of hepatocytes separated by no more than 100 µm.
-2. **Correlation function:** For each distance bin, the gene-expression correlation is calculated from mean-centered expression products and normalized by gene-expression variance.
+2. **Correlation function:**
+   - **Single-gene pipeline:** Computes spatial autocorrelation for each gene using mean-centered expression products normalized by gene-expression variance.
+   - **Gene-pair pipeline:** Computes spatial cross-correlation between pairs of genes using mean-centered expression products normalized by the product of their gene-expression standard deviations.
 3. **Correlation length $(\xi)$:** An exponential decay model, $(C(r)=A\exp(-r/\xi))$, is fitted to the correlation function using distance-bin centers at or beyond 30 µm. The fitted $(\xi)$ characterizes the spatial decay length of the correlation.
 4. **Susceptibility $(\chi)$:** The correlation function is integrated over the same distance tail using radial weighting, $(2\pi r\Delta r\)$.
 5. **Condition-level effects:** Core-level results are summarized separately for Control and CCl4, and effect metrics are calculated to compare the conditions.
@@ -39,29 +60,30 @@ The distance-bin width is 5 µm. The analysis uses the `lognorm` expression laye
 
 ## 4. Filtering and Quality Control
 
-Filtering occurs at three levels: core selection during data preparation, core-gene evaluation during spatial correlation analysis, and gene selection during condition-level summarization.
+Filtering occurs at three levels: core selection during data preparation, core-gene or core-gene-pair evaluation during spatial correlation analysis, and gene or gene-pair selection during condition-level summarization.
 
 ### Stage 1 — Gene and Core Selection
 
 - Only hepatocytes (`cell_type == "Hepatocyte"`) are retained.
-- Analysis is restricted to 5,500 highly variable genes selected from hepatocyte raw counts using Scanpy's `seurat_v3` method, with `cell_ranger` as a fallback.
+- Single-gene pipeline: Analysis is restricted to 5,500 highly variable genes selected from hepatocyte raw counts using Scanpy's seurat_v3 method, with cell_ranger as a fallback.
+- Gene-pair pipeline: All genes are used by default. HVG selection could be implemented similarly if required.
 - Ten configured cores are considered: seven Control cores and three CCl4 cores.
 - Cores containing fewer than 100 hepatocytes are skipped during Stage 2.
 - Cores without valid spatial pairs within 100 µm are skipped.
 
 ### Stage 2 — Core-Level Gene-Wise $(\xi)$ and $(\chi)$
 
-A gene-core combination must satisfy the following checks before its result is stored:
+The following QC checks are applied to individual genes or gene pairs, as appropriate:
 
 - **Gene variance:** Expression variance must be finite and greater than zero.
 - **Finite correlation curve:** At least one finite correlation value must be available.
-- **Minimum correlation magnitude:** `min_abs_corr = 0.0`; this setting does not impose an effective additional filter.
+- **Minimum correlation magnitude:** `min_abs_corr = 0.0`; this setting does not impose an effective additional filter. Only retained for the user if user wants a more stricter result filtering.
 - **Minimum tail points:** At least five finite correlation values must be available at distance-bin centers of 30 µm or greater.
 - **Curve variability:** The standard deviation of the full correlation curve must be at least $(10^{-4})$.
 
 The exponential fit is accepted only if numerical fitting succeeds, $(\xi>0)$, $(\xi<500)$ µm, and $(R^2>0.1)$. The fit is unconstrained, the positive-tail requirement is disabled, and the estimated uncertainty in $(\xi)$ is not used as an acceptance criterion.
 
-**Retention of $(\chi)$:** The integrated correlation is calculated over the same distance tail. If fitting fails or the fitted $(\xi)$ is rejected, the core-gene result can still be stored with $(\xi)$ recorded as missing (`NaN`). However, combinations excluded by the earlier variance, correlation-curve, tail-point, or curve-variability checks do not contribute to either $(\xi)$ or $(\chi)$ summaries.
+**Retention of $(\chi)$:** The integrated correlation is calculated over the same distance tail. If fitting fails or the fitted $(\xi)$ is rejected, the result can still be stored with $(\xi)$ recorded as missing (`NaN`). However, combinations excluded by the earlier variance, correlation-curve, tail-point, or curve-variability checks do not contribute to either $(\xi)$ or $(\chi)$ summaries.
 
 ### Stage 3 — Condition-Level Effect Table
 
@@ -72,7 +94,12 @@ Condition-level summaries use the following criteria:
 - **Condition coverage:** Both Control and CCl4 must have usable summaries for the required metrics.
 - **Positive mean correlation length:** Mean $(\xi)$ must be positive in both conditions.
 - **Minimum replication:** At least three valid core-level $(\xi)$ estimates are required in each condition.
-- **Finite effect metrics:** Genes are retained only when all four effect metrics are finite: $(Z_\xi)$, $(Z_\chi)$, $(\log(\xi_{\mathrm{Control}}/\xi_{\mathrm{CCl4}}))$, and $(\Delta\chi)$.
+- **Finite effect metrics:** Only rows with finite values for all required effect metrics are retained.
+
+The effect metrics differ between the pipelines:
+
+- Single-gene pipeline: Calculates $(Z_\xi)$, $(Z_\chi)$, $(\log(\xi_{\mathrm{Control}}/\xi_{\mathrm{CCl4}}))$, and $(\Delta\chi)$.
+- Gene-pair pipeline: Calculates $(Z_\xi)$, $(Z_\chi)$, $(Z_{|\chi|})$, $(\log(\xi_{\mathrm{Control}}/\xi_{\mathrm{CCl4}}))$, $(\Delta\chi)$, and $(\Delta|\chi|)$.
 
 No additional $(R^2)$ threshold is applied in Stage 3. Mean $(R^2)$ values are reported as descriptive quality-control summaries of accepted fits.
 
@@ -122,21 +149,29 @@ python -m pip install -r requirements.txt
 
 ### Step 2 — Configure the input data
 
-Open `xenium_single_gene/stage_01_prepare_data.py` and set the input `.h5ad` path to the location of your dataset. Ensure that the required metadata columns, expression layers, and spatial coordinates described in Section 5 are available.
+Configure the input .h5ad path in the relevant stage_01_prepare_data.py file:
+- Single-gene pipeline: xenium_single_gene/stage_01_prepare_data.py
+- Gene-pair pipeline: genepair/stage_01_prepare_data.py
+Ensure that the required metadata columns, expression layers, and spatial coordinates described in Section 5 are available.
 
 ### Step 3 — Run the pipeline
 
-From the repository root, execute:
+From the repository root, execute the command for the desired analysis.
 
+Single-gene pipeline:
 ```bash
 python -m xenium_single_gene.run_xenium_single_gene
 ```
+Gene-pair pipeline:
+```bash
+python -m genepair.run_genepair
+```
 
-The driver runs the stages in order:
-
-1. Data preparation and HVG selection.
+Each driver runs the three stages in order:
+1. Data preparation and gene selection.
 2. Core-level spatial correlation analysis.
 3. Condition-level effect summarization.
+The single-gene pipeline selects highly variable genes (HVGs), whereas the gene-pair pipeline uses all genes by default.
 
 ### Step 4 — Inspect the output
 
